@@ -1,0 +1,8 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /fx-auth/
+
+    # Redirect all requests to public folder
+    RewriteCond %{REQUEST_URI} !^/fx-auth/public/
+    RewriteRule ^(.*)$ public/$1 [L,QSA]
+</IfModule>

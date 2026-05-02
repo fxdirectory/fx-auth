@@ -1,0 +1,38 @@
+# Composer
+/vendor/
+/composer.lock
+
+# Environment
+/.env
+/.env.local
+/.env.*.local
+
+# Logs and cache
+/storage/logs/
+/storage/cache/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# IDE / Editor
+/.idea/
+/.vscode/
+*.sublime-workspace
+*.sublime-project
+
+# Phinx
+/phinx.php
+/database/migrations/*.sql
+
+# PHPUnit
+/phpunit.xml.cache
+
+# Generated files
+/public/.htaccess
+
+# Node
+/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
