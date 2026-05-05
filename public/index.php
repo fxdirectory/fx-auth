@@ -27,6 +27,6 @@ if ($basePath !== '') {
 $app->addRoutingMiddleware();
 $app->addErrorMiddleware(true, true, true);
 
-(require __DIR__ . '/../app/Config/routes.php')($app);
+(require __DIR__ . '/../routes/routes.php')($app);
 
 $app->run();

@@ -7,8 +7,7 @@ namespace App\Model;
 class User
 {
     public int $id;
-    public string $name;
-    public string $email;
+    public string $username;
     public string $password;
     public int $roleId;
     public ?string $roleName = null;
@@ -16,8 +15,7 @@ class User
     public function __construct(array $data)
     {
         $this->id = (int) ($data['id'] ?? 0);
-        $this->name = (string) ($data['name'] ?? '');
-        $this->email = (string) ($data['email'] ?? '');
+        $this->username = (string) ($data['username'] ?? '');
         $this->password = (string) ($data['password'] ?? '');
         $this->roleId = (int) ($data['role_id'] ?? ($data['roleId'] ?? 0));
         $this->roleName = $data['role_name'] ?? null;
@@ -27,9 +25,7 @@ class User
     {
         return [
             'id' => $this->id,
-            'name' => $this->name,
-            'email' => $this->email,
-            'role_id' => $this->roleId,
+            'username' => $this->username,
             'role_name' => $this->roleName,
         ];
     }

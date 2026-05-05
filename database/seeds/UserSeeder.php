@@ -10,7 +10,7 @@ final class UserSeeder extends AbstractSeed
     {
         $now = date('Y-m-d H:i:s');
 
-        $existingRoles = $this->fetchAll("SELECT id, name FROM roles WHERE name IN ('user','admin')");
+        $existingRoles = $this->fetchAll("SELECT id, name FROM roles WHERE name IN ('user','superadmin')");
         $roleIds = [];
         foreach ($existingRoles as $role) {
             $roleIds[$role['name']] = (int) $role['id'];
@@ -25,9 +25,9 @@ final class UserSeeder extends AbstractSeed
                 'updated_at' => $now,
             ];
         }
-        if (!isset($roleIds['admin'])) {
+        if (!isset($roleIds['superadmin'])) {
             $rolesToInsert[] = [
-                'name' => 'admin',
+                'name' => 'superadmin',
                 'description' => 'Administrator role',
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -36,38 +36,36 @@ final class UserSeeder extends AbstractSeed
 
         if (!empty($rolesToInsert)) {
             $this->table('roles')->insert($rolesToInsert)->saveData();
-            $existingRoles = $this->fetchAll("SELECT id, name FROM roles WHERE name IN ('user','admin')");
+            $existingRoles = $this->fetchAll("SELECT id, name FROM roles WHERE name IN ('user','superadmin')");
             $roleIds = [];
             foreach ($existingRoles as $role) {
                 $roleIds[$role['name']] = (int) $role['id'];
             }
         }
 
-        if (empty($roleIds['admin']) || empty($roleIds['user'])) {
-            throw new RuntimeException('Role IDs for admin or user could not be resolved.');
+        if (empty($roleIds['superadmin']) || empty($roleIds['user'])) {
+            throw new RuntimeException('Role IDs for superadmin or user could not be resolved.');
         }
 
         $usersToInsert = [];
-        $existingUsers = $this->fetchAll("SELECT email FROM users WHERE email IN ('admin@example.com', 'user@example.com')");
-        $existingUserEmails = array_column($existingUsers, 'email');
+        $existingUsers = $this->fetchAll("SELECT username FROM users WHERE username IN ('admin', 'user')");
+        $existingUserUsernames = array_column($existingUsers, 'username');
 
-        if (!in_array('admin@example.com', $existingUserEmails, true)) {
+        if (!in_array('superadmin', $existingUserUsernames, true)) {
             $usersToInsert[] = [
-                'role_id' => $roleIds['admin'],
-                'name' => 'Admin',
-                'email' => 'admin@example.com',
-                'password' => password_hash('password123', PASSWORD_DEFAULT),
+                'role_id' => $roleIds['superadmin'],
+                'username' => 'fxdirectory',
+                'password' => md5('Mustafi21'),
                 'created_at' => $now,
                 'updated_at' => $now,
             ];
         }
 
-        if (!in_array('user@example.com', $existingUserEmails, true)) {
+        if (!in_array('user', $existingUserUsernames, true)) {
             $usersToInsert[] = [
                 'role_id' => $roleIds['user'],
-                'name' => 'User',
-                'email' => 'user@example.com',
-                'password' => password_hash('password123', PASSWORD_DEFAULT),
+                'username' => 'user',
+                'password' => md5('password123'),
                 'created_at' => $now,
                 'updated_at' => $now,
             ];

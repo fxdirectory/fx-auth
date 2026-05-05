@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Helper\ApiResponse;
 use App\Model\Role;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -23,14 +24,14 @@ class RoleController
         $stmt = $this->pdo->query('SELECT id, name, description FROM roles ORDER BY id ASC');
         $roles = array_map(fn(array $row) => (new Role($row))->toArray(), $stmt->fetchAll(PDO::FETCH_ASSOC));
 
-        return $this->json($response, ['data' => $roles]);
+        return ApiResponse::success($response, 'Roles berhasil diambil', $roles);
     }
 
     public function view(Request $request, Response $response, array $args): Response
     {
         $id = (int) ($args['id'] ?? 0);
         if ($id <= 0) {
-            return $this->json($response, ['error' => 'Id role tidak valid'], 400);
+            return ApiResponse::error($response, 'Id role tidak valid', 400);
         }
 
         $stmt = $this->pdo->prepare('SELECT id, name, description FROM roles WHERE id = :id LIMIT 1');
@@ -38,16 +39,9 @@ class RoleController
         $data = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($data === false) {
-            return $this->json($response, ['error' => 'Role tidak ditemukan'], 404);
+            return ApiResponse::notFound($response, 'Role tidak ditemukan');
         }
 
-        return $this->json($response, ['data' => (new Role($data))->toArray()]);
-    }
-
-    private function json(Response $response, array $data, int $status = 200): Response
-    {
-        $payload = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $response->getBody()->write($payload);
-        return $response->withHeader('Content-Type', 'application/json')->withStatus($status);
+        return ApiResponse::success($response, 'Role berhasil diambil', (new Role($data))->toArray());
     }
 }

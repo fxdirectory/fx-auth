@@ -19,24 +19,13 @@ final class CreateAuthTables extends AbstractMigration
         $users = $this->table('users');
         $users
             ->addColumn('role_id', 'integer', ['signed' => false])
-            ->addColumn('name', 'string', ['limit' => 150])
-            ->addColumn('email', 'string', ['limit' => 150])
+            ->addColumn('username', 'string', ['limit' => 150])
             ->addColumn('password', 'string', ['limit' => 255])
+            ->addColumn('token', 'string', ['limit' => 255, 'null' => true, 'default' => null])
+            ->addColumn('token_expires_at', 'datetime', ['null' => true, 'default' => null])
             ->addTimestamps()
-            ->addIndex(['email'], ['unique' => true])
+            ->addIndex(['username'], ['unique' => true])
             ->addForeignKey('role_id', 'roles', 'id', ['delete'=> 'RESTRICT', 'update'=> 'CASCADE'])
             ->create();
-
-        $refreshTokens = $this->table('refresh_tokens');
-        $refreshTokens
-            ->addColumn('user_id', 'integer', ['signed' => false])
-            ->addColumn('token_hash', 'string', ['limit' => 128])
-            ->addColumn('expires_at', 'datetime')
-            ->addColumn('revoked', 'boolean', ['default' => false])
-            ->addTimestamps()
-            ->addIndex(['token_hash'], ['unique' => true])
-            ->addForeignKey('user_id', 'users', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
-            ->create();
-
     }
 }
