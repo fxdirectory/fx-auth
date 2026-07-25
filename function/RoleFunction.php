@@ -2,15 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Controller;
+namespace App\Functions;
 
-use App\Helper\ApiResponse;
-use App\Model\Role;
+use App\Utils\ApiResponse;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use PDO;
 
-class RoleController
+class RoleFunction
 {
     private PDO $pdo;
 
@@ -22,7 +21,11 @@ class RoleController
     public function list(Request $request, Response $response): Response
     {
         $stmt = $this->pdo->query('SELECT id, name, description FROM roles ORDER BY id ASC');
-        $roles = array_map(fn(array $row) => (new Role($row))->toArray(), $stmt->fetchAll(PDO::FETCH_ASSOC));
+        $roles = array_map(fn(array $row) => [
+            'id' => (int) $row['id'],
+            'name' => $row['name'],
+            'description' => $row['description'],
+        ], $stmt->fetchAll(PDO::FETCH_ASSOC));
 
         return ApiResponse::success($response, 'Roles berhasil diambil', $roles);
     }
@@ -42,6 +45,10 @@ class RoleController
             return ApiResponse::notFound($response, 'Role tidak ditemukan');
         }
 
-        return ApiResponse::success($response, 'Role berhasil diambil', (new Role($data))->toArray());
+        return ApiResponse::success($response, 'Role berhasil diambil', [
+            'id' => (int) $data['id'],
+            'name' => $data['name'],
+            'description' => $data['description'],
+        ]);
     }
 }

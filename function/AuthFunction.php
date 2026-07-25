@@ -2,19 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Controller;
+namespace App\Functions;
 
-use App\Config\Database;
-use App\Config\JWTConfig;
-use App\Helper\ApiResponse;
-use App\Model\RefreshToken;
-use App\Model\User;
+use App\Conf\Database;
+use App\Conf\JWTConfig;
+use App\Utils\ApiResponse;
 use Firebase\JWT\JWT;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use PDO;
 
-class AuthController
+class AuthFunction
 {
     private PDO $pdo;
     private string $jwtSecret;
@@ -37,9 +35,9 @@ class AuthController
     {
         $data = json_decode((string) $request->getBody(), true) ?: [];
         
-        $name       = $data['name'];
-        $username   = $data['username'];
-        $password   = $data['password'];
+        $name = trim((string) ($data['name'] ?? ''));
+        $username = trim((string) ($data['username'] ?? ''));
+        $password = (string) ($data['password'] ?? '');
 
         if ($name === '' || $username === '' || $password === '') {
             return ApiResponse::error(
@@ -78,15 +76,15 @@ class AuthController
     {
         $data = json_decode((string) $request->getBody(), true) ?: [];
         $username = trim((string) ($data['username'] ?? ''));
-        $password = md5($data['password']);
+        $password = md5((string) ($data['password'] ?? ''));
 
         $user = $this->findUserByUsername($username);
-        if ($user === null || $password !== $user->password) {
+        if ($user === null || $password !== $user['password']) {
             return ApiResponse::unauthorized($response, 'Username atau password tidak valid');
         }
 
         $accessToken = $this->generateAccessToken($user);
-        $refreshToken = $this->createRefreshToken($user->id);
+        $refreshToken = $this->createRefreshToken((int) $user['id']);
 
         return ApiResponse::success(
             $response, 
@@ -133,9 +131,9 @@ class AuthController
             $response, 
             'Profile berhasil diambil', 
             [
-                'id' => $user->id,
-                'username' => $user->username,
-                'role' => $user->roleName,
+                'id' => (int) $user['id'],
+                'username' => $user['username'],
+                'role' => $user['role_name'],
             ]);
     }
 
@@ -149,18 +147,18 @@ class AuthController
         }
 
         $tokenData = $this->findRefreshToken($refreshToken);
-        if ($tokenData === null || $tokenData->revoked || $tokenData->isExpired()) {
+        if ($tokenData === null || strtotime((string) $tokenData['token_expires_at']) <= time()) {
             return ApiResponse::unauthorized($response, 'Refresh token tidak valid atau kadaluarsa');
         }
 
-        $user = $this->findUserById($tokenData->userId);
+        $user = $this->findUserById((int) $tokenData['id']);
         if ($user === null) {
             return ApiResponse::notFound($response, 'User tidak ditemukan');
         }
 
         $this->revokeRefreshToken($refreshToken);
         $accessToken = $this->generateAccessToken($user);
-        $newRefreshToken = $this->createRefreshToken($user->id);
+        $newRefreshToken = $this->createRefreshToken((int) $user['id']);
 
         return ApiResponse::success($response, 'Token berhasil diperbarui', [
             'access_token' => $accessToken,
@@ -170,11 +168,12 @@ class AuthController
         ]);
     }
 
-    private function findUserByUsername(string $username): ?User
+    private function findUserByUsername(string $username): ?array
     {
         $stmt = $this->pdo->prepare(
                     'SELECT 
                         u.id AS id,
+                        u.password AS password,
                         u.username AS username, 
                         r.name AS role_name 
                     FROM users u 
@@ -183,10 +182,10 @@ class AuthController
                     LIMIT 1');
         $stmt->execute(['username' => $username]);
         $data = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $data ? new User($data) : null;
+        return $data ?: null;
     }
 
-    private function findUserById(int $id): ?User
+    private function findUserById(int $id): ?array
     {
         $stmt = $this->pdo->prepare(
             'SELECT 
@@ -199,7 +198,7 @@ class AuthController
         );
         $stmt->execute(['id' => $id]);
         $data = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $data ? new User($data) : null;
+        return $data ?: null;
     }
 
     private function findRoleIdByName(string $name): ?int
@@ -210,7 +209,7 @@ class AuthController
         return $data ? (int) $data['id'] : null;
     }
 
-    private function generateAccessToken(User $user): string
+    private function generateAccessToken(array $user): string
     {
         $now = time();
         $payload = [
@@ -218,9 +217,9 @@ class AuthController
             'aud' => $this->jwtAudience,
             'iat' => $now,
             'exp' => $now + $this->jwtExpire,
-            'sub' => $user->id,
-            'name' => $user->username,
-            'role' => $user->roleName,
+            'sub' => (int) $user['id'],
+            'name' => $user['username'],
+            'role' => $user['role_name'],
         ];
 
         return JWT::encode($payload, $this->jwtSecret, 'HS256');
@@ -242,19 +241,19 @@ class AuthController
         return $token;
     }
 
-    private function findRefreshToken(string $token): ?RefreshToken
+    private function findRefreshToken(string $token): ?array
     {
         $hash = hash('sha256', $token);
-        $stmt = $this->pdo->prepare('SELECT * FROM refresh_tokens WHERE token_hash = :token_hash LIMIT 1');
+        $stmt = $this->pdo->prepare('SELECT * FROM users WHERE token = :token_hash LIMIT 1');
         $stmt->execute(['token_hash' => $hash]);
         $data = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $data ? new RefreshToken($data) : null;
+        return $data ?: null;
     }
 
     private function revokeRefreshToken(string $token): void
     {
         $hash = hash('sha256', $token);
-        $stmt = $this->pdo->prepare('UPDATE refresh_tokens SET revoked = 1, updated_at = NOW() WHERE token_hash = :token_hash');
+        $stmt = $this->pdo->prepare('UPDATE users SET token = NULL, token_expires_at = NULL, updated_at = NOW() WHERE token = :token_hash');
         $stmt->execute(['token_hash' => $hash]);
     }
 }

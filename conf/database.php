@@ -1,8 +1,7 @@
 <?php
-
 declare(strict_types=1);
 
-namespace App\Config;
+namespace App\Conf;
 
 use PDO;
 
@@ -10,12 +9,12 @@ class Database
 {
     public static function connect(): PDO
     {
-        $driver = $_ENV['DB_DRIVER'] ?? 'mysql';
-        $host = $_ENV['DB_HOST'] ?? '127.0.0.1';
-        $port = $_ENV['DB_PORT'] ?? '3306';
-        $dbName = $_ENV['DB_DATABASE'] ?? 'fx-auth';
-        $user = $_ENV['DB_USERNAME'] ?? 'root';
-        $pass = $_ENV['DB_PASSWORD'] ?? '';
+        $driver     = $_ENV['DB_DRIVER'] ?? 'mysql';
+        $host       = $_ENV['DB_HOST'] ?? '127.0.0.1';
+        $port       = $_ENV['DB_PORT'] ?? '3306';
+        $dbName     = $_ENV['DB_DATABASE'] ?? 'fx-auth';
+        $user       = $_ENV['DB_USERNAME'] ?? 'root';
+        $pass       = $_ENV['DB_PASSWORD'] ?? '';
 
         $dsn = sprintf('%s:host=%s;port=%s;dbname=%s;charset=utf8mb4', $driver, $host, $port, $dbName);
 

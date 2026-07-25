@@ -19,6 +19,7 @@ final class CreateAuthTables extends AbstractMigration
         $users = $this->table('users');
         $users
             ->addColumn('role_id', 'integer', ['signed' => false])
+            ->addColumn('name', 'string', ['limit' => 150])
             ->addColumn('username', 'string', ['limit' => 150])
             ->addColumn('password', 'string', ['limit' => 255])
             ->addColumn('token', 'string', ['limit' => 255, 'null' => true, 'default' => null])

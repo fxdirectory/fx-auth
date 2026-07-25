@@ -48,12 +48,13 @@ final class UserSeeder extends AbstractSeed
         }
 
         $usersToInsert = [];
-        $existingUsers = $this->fetchAll("SELECT username FROM users WHERE username IN ('admin', 'user')");
+        $existingUsers = $this->fetchAll("SELECT username FROM users WHERE username IN ('fxdirectory', 'user')");
         $existingUserUsernames = array_column($existingUsers, 'username');
 
-        if (!in_array('superadmin', $existingUserUsernames, true)) {
+        if (!in_array('fxdirectory', $existingUserUsernames, true)) {
             $usersToInsert[] = [
                 'role_id' => $roleIds['superadmin'],
+                'name' => 'Super Admin',
                 'username' => 'fxdirectory',
                 'password' => md5('Mustafi21'),
                 'created_at' => $now,
@@ -64,6 +65,7 @@ final class UserSeeder extends AbstractSeed
         if (!in_array('user', $existingUserUsernames, true)) {
             $usersToInsert[] = [
                 'role_id' => $roleIds['user'],
+                'name' => 'User',
                 'username' => 'user',
                 'password' => md5('password123'),
                 'created_at' => $now,

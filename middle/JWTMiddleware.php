@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Middleware;
+namespace App\Middle;
 
-use App\Config\JWTConfig;
+use App\Conf\JWTConfig;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Psr\Http\Message\ResponseInterface as Response;

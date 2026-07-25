@@ -12,7 +12,10 @@
   },
   "autoload": {
     "psr-4": {
-      "App\\": "app/"
+      "App\\Functions\\": "function/",
+      "App\\Utils\\": "utils/",
+      "App\\Middle\\": "middle/",
+      "App\\Conf\\": "conf/"
     }
   },
   "autoload-dev": {

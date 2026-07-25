@@ -4,10 +4,14 @@ Slim PHP microservice untuk autentikasi dengan login, logout, refresh token, dan
 
 ## Struktur Folder
 
-- `app/` - kode aplikasi
+- `function/` - logic aplikasi seperti controller
+- `utils/` - helper dan utilitas reusable
+- `middle/` - middleware aplikasi
+- `conf/` - konfigurasi aplikasi
+- `db/` - migrations dan seeds database
 - `public/` - entry point Apache
-- `storage/` - logs dan cache
-- `tests/` - unit dan feature test
+- `routes/` - definisi route Slim
+- `vendor/` - dependency Composer
 
 ## Instalasi
 
@@ -21,6 +25,20 @@ cp .env.example .env
 ```bash
 composer start
 ```
+
+## Nginx
+
+Project ini bisa dijalankan lewat Nginx dengan root mengarah ke folder `public/`.
+Contoh konfigurasi tersedia di `nginx/fx-auth.conf`.
+
+Jika memakai konfigurasi dedicated domain seperti `fx-auth.test`, gunakan:
+
+```env
+APP_BASE_PATH=
+APP_URL=http://fx-auth.test
+```
+
+Pastikan PHP-FPM/FastCGI berjalan di `127.0.0.1:9000`, atau sesuaikan nilai `fastcgi_pass` di konfigurasi Nginx.
 
 ## Migrasi Database
 
