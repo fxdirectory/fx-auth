@@ -40,6 +40,13 @@ return function (App $app): void {
         'refresh_token' => ['required' => true, 'type' => 'string'],
     ]);
 
+    //url root redirect to health check
+    $app->get('/', function (Request $request, Response $response): Response {
+        return $response
+            ->withHeader('Location', '/health')
+            ->withStatus(302);
+    }); 
+    
     $app->get(
         '/health', 
         function (Request $request, Response $response): Response {
