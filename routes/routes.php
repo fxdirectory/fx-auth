@@ -13,9 +13,6 @@ use Slim\App;
 use Slim\Psr7\Request;
 
 return function (App $app): void {
-    $pdo = Database::connect();
-    $role = new RoleFunction($pdo);
-
     // Middleware instances
     $jwtMiddleware = new JWTMiddleware();
 
@@ -39,6 +36,6 @@ return function (App $app): void {
     $app->get('/auth/profile',      [new AuthFunction(), 'profile'])->add($jwtMiddleware);
 
     // Role routes with JWT protection
-    $app->get('/roles',             [$role, 'list'])->add($jwtMiddleware);
-    $app->get('/roles/{id:[0-9]+}', [$role, 'view'])->add($jwtMiddleware);
+    $app->get('/roles',             [new RoleFunction(), 'list'])->add($jwtMiddleware);
+    $app->get('/roles/{id:[0-9]+}', [new RoleFunction(), 'view'])->add($jwtMiddleware);
 };

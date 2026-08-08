@@ -7,15 +7,16 @@ namespace App\Functions;
 use App\Utils\ApiResponse;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use App\Conf\Database;
 use PDO;
 
 class RoleFunction
 {
     private PDO $pdo;
 
-    public function __construct(PDO $pdo)
+    public function __construct()
     {
-        $this->pdo = $pdo;
+        $this->pdo = Database::connect();
     }
 
     public function list(Request $request, Response $response): Response

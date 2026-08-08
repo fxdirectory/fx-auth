@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Functions;
 
 use App\Conf\Database;
-use App\Conf\JWTConfig;
 use App\Utils\ApiResponse;
 use App\Utils\AuthUtils;
 use Psr\Http\Message\ResponseInterface as Response;
