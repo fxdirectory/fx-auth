@@ -7,46 +7,46 @@ namespace App\Functions;
 use App\Conf\Database;
 use App\Conf\JWTConfig;
 use App\Utils\ApiResponse;
-use Firebase\JWT\JWT;
+use App\Utils\AuthUtils;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use App\Middle\ValidateInputMiddleware;
 use PDO;
 
 class AuthFunction
 {
     private PDO $pdo;
-    private string $jwtSecret;
-    private string $jwtIssuer;
-    private string $jwtAudience;
-    private int $jwtExpire;
-    private int $refreshExpire;
+    private AuthUtils $authUtils;
+    private validateInputMiddleware $validateInput;
 
     public function __construct()
     {
         $this->pdo = Database::connect();
-        $this->jwtSecret = JWTConfig::getSecret();
-        $this->jwtIssuer = JWTConfig::getIssuer();
-        $this->jwtAudience = JWTConfig::getAudience();
-        $this->jwtExpire = JWTConfig::getExpire();
-        $this->refreshExpire = JWTConfig::getRefreshExpire();
+        $this->authUtils = new AuthUtils();
+        $this->validateInput = new ValidateInputMiddleware();
     }
 
     public function register(Request $request, Response $response): Response
     {
         $data = json_decode((string) $request->getBody(), true) ?: [];
+
+        $rules = [
+            'name'      => ['required' => true, 'type' => 'string'],
+            'username'  => ['required' => true, 'type' => 'username'],
+            'password'  => ['required' => true, 'type' => 'password'],
+        ];
+
+        $errors = $this->validateInput->validate($data, $rules);
+        if (!empty($errors)) {
+            return ApiResponse::error($response, 'Validasi Gagal', 400);
+        }
         
         $name = trim((string) ($data['name'] ?? ''));
         $username = trim((string) ($data['username'] ?? ''));
         $password = (string) ($data['password'] ?? '');
 
-        if ($name === '' || $username === '' || $password === '') {
-            return ApiResponse::error(
-                $response, 
-                'Name, username, dan password wajib diisi'
-            );
-        }
 
-        $roleId = $this->findRoleIdByName('user');
+        $roleId = $this->authUtils->findRoleIdByName('user');
         if ($roleId === null) {
             return ApiResponse::serverError(
                 $response, 
@@ -75,16 +75,27 @@ class AuthFunction
     public function login(Request $request, Response $response): Response
     {
         $data = json_decode((string) $request->getBody(), true) ?: [];
+
+        $rules = [
+            'username' => ['required' => true, 'type' => 'username'],
+            'password' => ['required' => true, 'type' => 'password'],
+        ];
+
+        $errors = $this->validateInput->validate($data, $rules);
+        if (!empty($errors)) {
+            return ApiResponse::error($response, 'Validasi Gagal', 400);
+        }
+
         $username = trim((string) ($data['username'] ?? ''));
         $password = md5((string) ($data['password'] ?? ''));
 
-        $user = $this->findUserByUsername($username);
+        $user = $this->authUtils->findUserByUsername($username);
         if ($user === null || $password !== $user['password']) {
             return ApiResponse::unauthorized($response, 'Username atau password tidak valid');
         }
 
-        $accessToken = $this->generateAccessToken($user);
-        $refreshToken = $this->createRefreshToken((int) $user['id']);
+        $accessToken = $this->authUtils->generateAccessToken($user);
+        $refreshToken = $this->authUtils->createRefreshToken((int) $user['id']);
 
         return ApiResponse::success(
             $response, 
@@ -92,7 +103,7 @@ class AuthFunction
             [
                 'access_token' => $accessToken,
                 'refresh_token' => $refreshToken,
-                'expires_in' => $this->jwtExpire,
+                'expires_in' => $this->authUtils->getJwtExpire(),
                 'token_type' => 'Bearer',
             ]
         );
@@ -100,14 +111,18 @@ class AuthFunction
 
     public function logout(Request $request, Response $response): Response
     {
-        $data = json_decode((string) $request->getBody(), true) ?: [];
-        $refreshToken = (string) ($data['refresh_token'] ?? '');
+        $user_data = $request->getAttribute('user');
 
-        if ($refreshToken === '') {
-            return ApiResponse::error($response, 'Refresh token wajib dikirim', 400);
+        if ($user_data === null) {
+            return ApiResponse::unauthorized($response, 'User tidak ditemukan di token');
         }
 
-        $this->revokeRefreshToken($refreshToken);
+        $userId = (int) ($user_data->sub ?? 0);
+        if ($userId <= 0) {
+            return ApiResponse::unauthorized($response, 'User tidak valid');
+        }
+
+        $this->authUtils->revokeRefreshTokenByUserId($userId);
 
         return ApiResponse::success($response, 'Logout berhasil');
     }
@@ -121,7 +136,7 @@ class AuthFunction
         }
 
         $userId = (int) ($user_data->sub ?? 0);
-        $user = $this->findUserById($userId);
+        $user = $this->authUtils->findUserById($userId);
         
         if ($user === null) {
             return ApiResponse::notFound($response, 'User tidak ditemukan');
@@ -139,121 +154,33 @@ class AuthFunction
 
     public function refresh(Request $request, Response $response): Response
     {
-        $data = json_decode((string) $request->getBody(), true) ?: [];
-        $refreshToken = (string) ($data['refresh_token'] ?? '');
+        $user_data = $request->getAttribute('user');
 
-        if ($refreshToken === '') {
-            return ApiResponse::error($response, 'Refresh token wajib dikirim', 400);
+        if ($user_data === null) {
+            return ApiResponse::unauthorized($response, 'User tidak ditemukan di token');
         }
 
-        $tokenData = $this->findRefreshToken($refreshToken);
-        if ($tokenData === null || strtotime((string) $tokenData['token_expires_at']) <= time()) {
-            return ApiResponse::unauthorized($response, 'Refresh token tidak valid atau kadaluarsa');
+        $userId = (int) ($user_data->sub ?? 0);
+        if ($userId <= 0) {
+            return ApiResponse::unauthorized($response, 'User tidak valid');
         }
 
-        $user = $this->findUserById((int) $tokenData['id']);
+        $user = $this->authUtils->findUserById($userId);
         if ($user === null) {
             return ApiResponse::notFound($response, 'User tidak ditemukan');
         }
 
-        $this->revokeRefreshToken($refreshToken);
-        $accessToken = $this->generateAccessToken($user);
-        $newRefreshToken = $this->createRefreshToken((int) $user['id']);
+        $this->authUtils->revokeRefreshTokenByUserId($userId);
+        $accessToken = $this->authUtils->generateAccessToken($user);
+        $newRefreshToken = $this->authUtils->createRefreshToken($userId);
 
         return ApiResponse::success($response, 'Token berhasil diperbarui', [
             'access_token' => $accessToken,
             'refresh_token' => $newRefreshToken,
-            'expires_in' => $this->jwtExpire,
+            'expires_in' => $this->authUtils->getJwtExpire(),
             'token_type' => 'Bearer',
         ]);
     }
 
-    private function findUserByUsername(string $username): ?array
-    {
-        $stmt = $this->pdo->prepare(
-                    'SELECT 
-                        u.id AS id,
-                        u.password AS password,
-                        u.username AS username, 
-                        r.name AS role_name 
-                    FROM users u 
-                    LEFT JOIN roles r ON u.role_id = r.id 
-                    WHERE u.username = :username 
-                    LIMIT 1');
-        $stmt->execute(['username' => $username]);
-        $data = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $data ?: null;
-    }
-
-    private function findUserById(int $id): ?array
-    {
-        $stmt = $this->pdo->prepare(
-            'SELECT 
-                u.*, 
-                r.name AS role_name 
-            FROM users u 
-            LEFT JOIN roles r ON u.role_id = r.id 
-            WHERE u.id = :id 
-            LIMIT 1'
-        );
-        $stmt->execute(['id' => $id]);
-        $data = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $data ?: null;
-    }
-
-    private function findRoleIdByName(string $name): ?int
-    {
-        $stmt = $this->pdo->prepare('SELECT id FROM roles WHERE name = :name LIMIT 1');
-        $stmt->execute(['name' => $name]);
-        $data = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $data ? (int) $data['id'] : null;
-    }
-
-    private function generateAccessToken(array $user): string
-    {
-        $now = time();
-        $payload = [
-            'iss' => $this->jwtIssuer,
-            'aud' => $this->jwtAudience,
-            'iat' => $now,
-            'exp' => $now + $this->jwtExpire,
-            'sub' => (int) $user['id'],
-            'name' => $user['username'],
-            'role' => $user['role_name'],
-        ];
-
-        return JWT::encode($payload, $this->jwtSecret, 'HS256');
-    }
-
-    private function createRefreshToken(int $userId): string
-    {
-        $token = bin2hex(random_bytes(32));
-        $hash = hash('sha256', $token);
-        $expiresAt = date('Y-m-d H:i:s', time() + $this->refreshExpire);
-
-        $stmt = $this->pdo->prepare('UPDATE users SET token = :token_hash, token_expires_at = :expires_at WHERE id = :user_id');
-        $stmt->execute([
-            'user_id' => $userId,
-            'token_hash' => $hash,
-            'expires_at' => $expiresAt,
-        ]);
-
-        return $token;
-    }
-
-    private function findRefreshToken(string $token): ?array
-    {
-        $hash = hash('sha256', $token);
-        $stmt = $this->pdo->prepare('SELECT * FROM users WHERE token = :token_hash LIMIT 1');
-        $stmt->execute(['token_hash' => $hash]);
-        $data = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $data ?: null;
-    }
-
-    private function revokeRefreshToken(string $token): void
-    {
-        $hash = hash('sha256', $token);
-        $stmt = $this->pdo->prepare('UPDATE users SET token = NULL, token_expires_at = NULL, updated_at = NOW() WHERE token = :token_hash');
-        $stmt->execute(['token_hash' => $hash]);
-    }
+    
 }

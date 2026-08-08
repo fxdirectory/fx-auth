@@ -9,21 +9,31 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
-class ValidateInputMiddleware implements MiddlewareInterface
-{
+class ValidateInputMiddleware implements MiddlewareInterface{
+    
     private array $rules;
 
-    /**
-     * @param array $rules Format: ['field_name' => ['required' => true, 'type' => 'email', ...]]
-     */
-    public function __construct(array $rules = [])
-    {
+    public function __construct(array $rules = []){
         $this->rules = $rules;
     }
 
-    public function process(Request $request, RequestHandlerInterface $handler): Response
-    {
-        $data = json_decode((string) $request->getBody(), true) ?: [];
+    public function process(Request $request, RequestHandlerInterface $handler): Response{
+        $body = (string) $request->getBody();
+        $data = json_decode($body, true);
+
+        if (!is_array($data)) {
+            if (is_string($data)) {
+                $decoded = json_decode($data, true);
+                if (is_array($decoded)) {
+                    $data = $decoded;
+                }
+            }
+        }
+
+        if (!is_array($data)) {
+            $parsedBody = $request->getParsedBody();
+            $data = is_array($parsedBody) ? $parsedBody : [];
+        }
 
         $errors = $this->validate($data, $this->rules);
 
@@ -34,8 +44,7 @@ class ValidateInputMiddleware implements MiddlewareInterface
         return $handler->handle($request);
     }
 
-    private function validate(array $data, array $rules): array
-    {
+    public function validate(array $data, array $rules): array{
         $errors = [];
 
         foreach ($rules as $field => $fieldRules) {
@@ -116,8 +125,7 @@ class ValidateInputMiddleware implements MiddlewareInterface
         return $errors;
     }
 
-    private function badRequest(array $errors): Response
-    {
+    private function badRequest(array $errors): Response{
         $response = new \Slim\Psr7\Response();
         $payload = json_encode(['error' => 'Validasi gagal', 'errors' => $errors], JSON_UNESCAPED_UNICODE);
         $response->getBody()->write($payload);
