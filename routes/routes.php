@@ -19,11 +19,11 @@ return function (App $app): void {
     //url root redirect to health check
     $app->get('/', function (Request $request, Response $response): Response {
         return $response
-            ->withHeader('Location', '/health')
+            ->withHeader('Location', '/auth/health')
             ->withStatus(302);
     }); 
     
-    $app->get('/health', 
+    $app->get('/auth/health', 
         function (Request $request, Response $response): Response {
             return ApiResponse::success($response, 'fx-auth is running');
     });
@@ -36,6 +36,6 @@ return function (App $app): void {
     $app->get('/auth/profile',      [new AuthFunction(), 'profile'])->add($jwtMiddleware);
 
     // Role routes with JWT protection
-    $app->get('/roles',             [new RoleFunction(), 'list'])->add($jwtMiddleware);
-    $app->get('/roles/{id:[0-9]+}', [new RoleFunction(), 'view'])->add($jwtMiddleware);
+    $app->get('/auth/roles',             [new RoleFunction(), 'list'])->add($jwtMiddleware);
+    $app->get('/auth/roles/{id:[0-9]+}', [new RoleFunction(), 'view'])->add($jwtMiddleware);
 };
