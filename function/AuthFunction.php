@@ -37,7 +37,7 @@ class AuthFunction
 
         $errors = $this->validateInput->validate($data, $rules);
         if (!empty($errors)) {
-            return ApiResponse::error($response, 'Validasi Gagal', 400);
+            return ApiResponse::error($response, 'Validasi Gagal', $errors, 400);
         }
         
         $name = trim((string) ($data['name'] ?? ''));
@@ -82,7 +82,7 @@ class AuthFunction
 
         $errors = $this->validateInput->validate($data, $rules);
         if (!empty($errors)) {
-            return ApiResponse::error($response, 'Validasi Gagal', 400);
+            return ApiResponse::error($response, 'Validasi Gagal', $errors, 400);
         }
 
         $username = trim((string) ($data['username'] ?? ''));
@@ -146,6 +146,7 @@ class AuthFunction
             'Profile berhasil diambil', 
             [
                 'id' => (int) $user['id'],
+                'name' => $user['name'],
                 'username' => $user['username'],
                 'role' => $user['role_name'],
             ]);

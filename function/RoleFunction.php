@@ -35,7 +35,7 @@ class RoleFunction
     {
         $id = (int) ($args['id'] ?? 0);
         if ($id <= 0) {
-            return ApiResponse::error($response, 'Id role tidak valid', 400);
+            return ApiResponse::error($response, 'Id role tidak valid', null, 400);
         }
 
         $stmt = $this->pdo->prepare('SELECT id, name, description FROM roles WHERE id = :id LIMIT 1');

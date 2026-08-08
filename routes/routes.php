@@ -17,7 +17,7 @@ return function (App $app): void {
     $jwtMiddleware = new JWTMiddleware();
 
     //url root redirect to health check
-    $app->get('/', function (Request $request, Response $response): Response {
+    $app->get('/auth', function (Request $request, Response $response): Response {
         return $response
             ->withHeader('Location', '/auth/health')
             ->withStatus(302);

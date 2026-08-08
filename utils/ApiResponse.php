@@ -19,12 +19,12 @@ class ApiResponse
         return self::json($response, $payload, $status);
     }
 
-    public static function error(Response $response, string $message, int $status = 400): Response
+    public static function error(Response $response, string $message, array $data = null, int $status = 400): Response
     {
         $payload = [
             'message' => $message,
             'status' => 'error',
-            'data' => null
+            'data' => $data
         ];
 
         return self::json($response, $payload, $status);
